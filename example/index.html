@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excalidraw Editor Test - EditorMessageBus Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 28px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      height: calc(100vh - 100px);
+    }
+
+    .control-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow-y: auto;
+    }
+
+    .control-panel h2 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .editor-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+
+    .btn-info {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+      color: white;
+    }
+
+    .log-panel {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .log-panel h3 {
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .log-entry {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      padding: 5px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      background: #2d2d2d;
+      color: #ccc;
+    }
+
+    .log-entry.info {
+      color: #4fc3f7;
+    }
+
+    .log-entry.success {
+      color: #81c784;
+    }
+
+    .log-entry.warning {
+      color: #ffb74d;
+    }
+
+    .log-entry.error {
+      color: #e57373;
+    }
+
+    .section-title {
+      font-size: 14px;
+      color: #666;
+      margin: 20px 0 10px 0;
+      font-weight: 600;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .input-group input,
+    .input-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .input-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .message-preview {
+      background: #f5f5f5;
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>📝 Excalidraw Editor + EditorMessageBus 测试页面</h1>
+
+    <div class="main-layout">
+      <!-- 控制面板 -->
+      <div class="control-panel">
+        <h2>🎮 控制面板</h2>
+
+        <div class="btn-group">
+          <button class="btn-primary" onclick="sendReady()">
+            🚀 发送就绪消息
+          </button>
+          <button class="btn-success" onclick="sendSave()">
+            💾 发送保存指令
+          </button>
+          <button class="btn-warning" onclick="sendExportPNG()">
+            🖼️ 导出 PNG
+          </button>
+          <button class="btn-info" onclick="sendExportData()">
+            📄 导出数据
+          </button>
+          <button class="btn-danger" onclick="clearCanvas()">
+            🗑️ 清空画布
+          </button>
+        </div>
+
+        <div class="section-title">设置数据</div>
+        <div class="input-group">
+          <label>元素数据 (JSON)</label>
+          <textarea id="elementsInput"
+            placeholder='[{"type":"rectangle","id":"123","x":100,"y":100,"width":200,"height":100}]'
+            value=""></textarea>
+        </div>
+        <button class="btn-info" onclick="setElements()">
+          📥 应用元素数据
+        </button>
+
+        <div class="section-title">配置选项</div>
+        <div class="input-group">
+          <label>Source ID</label>
+          <input type="text" id="sourceId" value="test-parent-window" />
+        </div>
+        <div class="input-group">
+          <label>调试模式</label>
+          <select id="debugMode" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+            <option value="true">开启</option>
+            <option value="false">关闭</option>
+          </select>
+        </div>
+
+        <!-- 日志面板 -->
+        <div class="log-panel">
+          <h3>📋 消息日志</h3>
+          <div id="logContainer"></div>
+        </div>
+      </div>
+
+      <!-- 编辑器容器 -->
+      <div class="editor-container">
+        <iframe id="editorFrame" src="http://localhost:5174" title="Excalidraw Editor"></iframe>
+      </div>
+    </div>
+  </div>
+  <script src="./index.umd.js"></script>
+
+  <script>
+    // 导入 EditorMessageBus
+    const WMB = window.WindowMessageBus;
+
+    const { EditorMessageBus } = window.WindowMessageBus
+    console.log('=====', EditorMessageBus)
+    let editorBus = null;
+    const logContainer = document.getElementById('logContainer');
+    const editorFrame = document.getElementById('editorFrame');
+    const defaultElements = `{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "http://localhost:5174",
+  "elements": [
+    {
+      "id": "aTVrw7orK4JoWc176gPcq",
+      "type": "rectangle",
+      "x": 419.203125,
+      "y": 146.1328125,
+      "width": 114.93359375,
+      "height": 59.68359375,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a0",
+      "roundness": {
+        "type": 3
+      },
+      "seed": 1973159372,
+      "version": 12,
+      "versionNonce": 1204305100,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1774936606690,
+      "link": null,
+      "locked": false
+    }
+  ],
+  "appState": {
+    "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}`
+    // 初始化 EditorMessageBus
+    function initEditorBus() {
+      const sourceId = document.getElementById('sourceId').value;
+      const debug = document.getElementById('debugMode').value === 'true';
+
+      editorBus = new EditorMessageBus({
+        sourceId,
+        debug,
+      });
+
+      log('info', `EditorMessageBus 已初始化 (sourceId: ${sourceId})`);
+
+      // 监听各种消息事件
+      editorBus.onSetData((data) => {
+        log('success', `收到 setData 消息：${JSON.stringify(data)}`);
+      });
+
+      editorBus.onSave((data) => {
+        log('success', `收到 save 消息：${JSON.stringify(data)}`);
+      });
+
+      editorBus.onExportPNG((data) => {
+        log('success', `收到 exportPNG 消息：${JSON.stringify(data)}`);
+      });
+
+      editorBus.onExportData((data) => {
+        log('success', `收到 exportData 消息：${JSON.stringify(data)}`);
+      });
+
+      editorBus.onReady((data) => {
+        log('success', `编辑器已就绪：${JSON.stringify(data)}`);
+      });
+      editorBus.onChange((data) => {
+        log('info', `内容变更：${JSON.stringify(data)}`);
+      });
+
+    }
+    // 日志输出函数
+    function log(type, message) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logContainer.insertBefore(entry, logContainer.firstChild);
+
+      // 限制日志数量
+      if (logContainer.children.length > 100) {
+        logContainer.removeChild(logContainer.lastChild);
+      }
+    }
+    console.log('hello');
+    // 暴露给全局的函数
+    window.sendReady = () => {
+      if (!editorBus) {
+        log('error', 'EditorMessageBus 未初始化');
+        return;
+      }
+      editorBus.isReady({ version: '1.0.0', testMode: true });
+      log('info', '已发送 isReady 消息');
+    };
+
+    window.sendSave = () => {
+      if (!editorBus) {
+        log('error', 'EditorMessageBus 未初始化');
+        return;
+      }
+      editorBus.save({ format: 'json' });
+      log('info', '已发送 save 消息');
+    };
+
+    window.sendExportPNG = () => {
+      if (!editorBus) {
+        log('error', 'EditorMessageBus 未初始化');
+        return;
+      }
+      editorBus.exportPNG({ format: 'png', quality: 1.0 }, editorFrame.contentWindow);
+      log('info', '已发送 exportPNG 消息');
+    };
+
+    window.sendExportData = () => {
+      if (!editorBus) {
+        log('error', 'EditorMessageBus 未初始化');
+        return;
+      }
+      editorBus.exportData({ format: 'json' }, editorFrame.contentWindow);
+      log('info', '已发送 exportData 消息');
+    };
+
+    window.setElements = () => {
+      if (!editorBus) {
+        log('error', 'EditorMessageBus 未初始化');
+        return;
+      }
+      try {
+        const elements = JSON.parse(document.getElementById('elementsInput').value);
+        editorBus.setData(elements, editorFrame.contentWindow);
+        log('success', `已发送 setData 消息，包含 ${elements.length} 个元素`);
+      } catch (e) {
+        log('error', `无效的 JSON: ${e.message}`);
+      }
+    };
+
+    window.clearCanvas = () => {
+      if (!editorBus) {
+        log('error', 'EditorMessageBus 未初始化');
+        return;
+      }
+      editorBus.setData([], editorFrame.contentWindow);
+      log('info', '已发送清空画布指令');
+    };
+
+    // 页面加载时初始化
+    window.addEventListener('load', () => {
+      initEditorBus();
+      document.getElementById('elementsInput').value = defaultElements;
+      log('info', '页面加载完成，EditorMessageBus 已准备就绪');
+      log('info', '提示：在左侧面板点击按钮向 Excalidraw 编辑器发送消息');
+    });
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', () => {
+      log('info', `窗口大小变化：${window.innerWidth} x ${window.innerHeight}`);
+    });
+  </script>
+</body>
+
+</html>
