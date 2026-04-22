@@ -266,15 +266,27 @@ ${data}`,
     // editorBus.isReady({ version: "1.0.0" });
     console.log("Diagram loaded");
   }, []);
-
+  const escapeHTML = (html: string) => {
+    return html
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  };
   // 设置 EditorMessageBus 的事件监听器
   useEffect(() => {
     // 监听设置数据事件
     editorBus.onSetData((data) => {
       console.log("收到设置数据指令:", data);
-      const xml = data.xml || data;
+      let xml = data.xml || data;
+      xml = xml.replace(/value="(.*?)"/gi, (item: string, value: string) => {
+        value = value.replaceAll("&#xa;", "/");
+        const tmp = escapeHTML(value);
+        return `value="${tmp}"`;
+      });
       if (xml && xml.startsWith("<mx")) {
-        apiRef.current?.load({ xml: data.xml || data });
+        apiRef.current?.load({ xml });
         localStorage.setItem("drawio-data", xml);
       }
     });
